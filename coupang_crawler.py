@@ -11,72 +11,111 @@ import sys
         - python coupang_crawler.py 로 실행하면 data 폴더에 coupang.xlsx 엑셀 파일이 생성됩니다.
 """
 
-headers = {"authority": "www.coupang.com",
-    "method": "GET",
-    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
-    "accept-encoding": "gzip, deflate, br",
-    "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.104 Whale/3.13.131.36 Safari/537.36",
-    "sec-ch-ua-platform": "macOS",
-    "cookie": "PCID=31489593180081104183684; _fbp=fb.1.1644931520418.1544640325; gd1=Y; X-CP-PT-locale=ko_KR; MARKETID=31489593180081104183684; sid=03ae1c0ed61946c19e760cf1a3d9317d808aca8b; x-coupang-origin-region=KOREA; x-coupang-target-market=KR; x-coupang-accept-language=ko_KR;"}
+class coupang_crawler():
+    def __init__(self):
+        self.headers = {"authority": "www.coupang.com",
+            "method": "GET",
+            "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+            "accept-encoding": "gzip, deflate, br",
+            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.104 Whale/3.13.131.36 Safari/537.36",
+            "sec-ch-ua-platform": "macOS",
+            "cookie": "PCID=31489593180081104183684; _fbp=fb.1.1644931520418.1544640325; gd1=Y; X-CP-PT-locale=ko_KR; MARKETID=31489593180081104183684; sid=03ae1c0ed61946c19e760cf1a3d9317d808aca8b; x-coupang-origin-region=KOREA; x-coupang-target-market=KR; x-coupang-accept-language=ko_KR;"}
 
-# 크롤링할 웹 페이지 URL txt 파일 읽기
-file = open("./data/coupang_url.txt", 'r')
+        # # 크롤링할 웹 페이지 URL txt 파일 읽기
+        # file = open("./data/coupang_url.txt", 'r')
 
-xl = openpyxl.Workbook()
-ws = xl.active
+        self.x = openpyxl.Workbook()
+        self.WS = self.x.active
 
-align_center = Alignment(horizontal='center', vertical='center')
-align_right = Alignment(horizontal='right', vertical='center')
-subtitle_color = PatternFill('solid', fgColor='C8C8FF')
+        self.align_center = Alignment(horizontal='center', vertical='center')
+        self.align_right = Alignment(horizontal='right', vertical='center')
+        self.subtitle_color = PatternFill('solid', fgColor='C8C8FF')
 
-ws['B2'].value = '제품명'
-ws['B2'].alignment = align_center
-ws['B2'].fill = subtitle_color
-ws['C2'].value = '수량'
-ws['C2'].alignment = align_center
-ws['C2'].fill = subtitle_color
-ws['D2'].value = '링크'
-ws['D2'].alignment = align_center
-ws['D2'].fill = subtitle_color
-ws['E2'].value = '가격'
-ws['E2'].alignment = align_center
-ws['E2'].fill = subtitle_color
+        self.WS['B2'].value = '제품명'
+        self.WS['B2'].alignment = self.align_center
+        self.WS['B2'].fill = self.subtitle_color
+        self.WS['C2'].value = '수량'
+        self.WS['C2'].alignment = self.align_center
+        self.WS['C2'].fill = self.subtitle_color
+        self.WS['D2'].value = '링크'
+        self.WS['D2'].alignment = self.align_center
+        self.WS['D2'].fill = self.subtitle_color
+        self.WS['E2'].value = '가격'
+        self.WS['E2'].alignment = self.align_center
+        self.WS['E2'].fill = self.subtitle_color
 
-index = 3
-total_price = 0
+    def get_instance(self, url, quantity):
+        # requests 모듈을 사용하여 웹 페이지의 HTML 코드 가져오기
+        html = requests.get(url=url, headers=self.headers).content
 
-while True:
-    # 크롤링할 웹 페이지 URL
-    data = file.readline().split()
-    if not data: break
-    url = data[0]
-    ea = data[1]
+        # BeautifulSoup을 사용하여 HTML 코드 파싱
+        soup = BeautifulSoup(html, 'html.parser')
 
-    # requests 모듈을 사용하여 웹 페이지의 HTML 코드 가져오기
-    html = requests.get(url=url, headers=headers).content
+        product_name = soup.find(attrs={"class", "prod-buy-header__title"}).get_text()
+        price = soup.strong.get_text()[:-1].replace(',','')
 
-    # BeautifulSoup을 사용하여 HTML 코드 파싱
-    soup = BeautifulSoup(html, 'html.parser')
+        return product_name, quantity, price
+    
+    def save_pyxl(self, instances, total_price):
+        for index, instance in enumerate(instances):
+            index += 3
 
-    product_name = soup.find(attrs={"class", "prod-buy-header__title"}).get_text()
-    price = soup.strong.get_text()
+            self.WS['B{}'.format(index)].value = instance["product_name"]
+            self.WS['C{}'.format(index)].value = instance["quantity"]
+            self.WS['C{}'.format(index)].alignment = self.align_center
+            self.WS['D{}'.format(index)].value = instance["link"]
+            self.WS['E{}'.format(index)].value = "{0:,d}원".format(instance["price"])
+            self.WS['E{}'.format(index)].alignment = self.align_center
 
-    ws['B{}'.format(index)].value = product_name
-    ws['C{}'.format(index)].value = ea
-    ws['C{}'.format(index)].alignment = align_center
-    ws['D{}'.format(index)].value = url
-    ws['E{}'.format(index)].value = price
-    ws['E{}'.format(index)].alignment = align_center
+        self.WS.column_dimensions['B'].width = 70
+        self.WS.column_dimensions['C'].width = 10
+        self.WS.column_dimensions['D'].width = 100
+        self.WS.column_dimensions['E'].width = 20
+        self.WS['D{}'.format(len(instances)+3)].value = "총계   "
+        self.WS['D{}'.format(len(instances)+3)].alignment = self.align_right
+        self.WS['E{}'.format(len(instances)+3)].value = format(total_price, ',') + "원"
+        self.WS['E{}'.format(len(instances)+3)].alignment = self.align_center
+        self.x.save('./data/coupang.xlsx')
 
-    index += 1
-    total_price += int(price[:-1].replace(',','')) * int(ea)
+        # self.WS['B{}'.format(index)].value = product_name
+        # self.WS['C{}'.format(index)].value = ea
+        # self.WS['C{}'.format(index)].alignment = align_center
+        # self.WS['D{}'.format(index)].value = url
+        # self.WS['E{}'.format(index)].value = price
+        # self.WS['E{}'.format(index)].alignment = align_center
 
-ws.column_dimensions['B'].width = 70
-ws.column_dimensions['C'].width = 10
-ws.column_dimensions['D'].width = 100
-ws.column_dimensions['E'].width = 20
-ws['D{}'.format(index+1)].value = "총계   "
-ws['D{}'.format(index+1)].alignment = align_right
-ws['E{}'.format(index+1)].value = format(total_price, ',') + "원"
-ws['E{}'.format(index+1)].alignment = align_center
-xl.save('./data/coupang.xlsx')
+# while True:
+#     # 크롤링할 웹 페이지 URL
+#     data = file.readline().split()
+#     if not data: break
+#     url = data[0]
+#     ea = data[1]
+
+#     # requests 모듈을 사용하여 웹 페이지의 HTML 코드 가져오기
+#     html = requests.get(url=url, headers=headers).content
+
+#     # BeautifulSoup을 사용하여 HTML 코드 파싱
+#     soup = BeautifulSoup(html, 'html.parser')
+
+#     product_name = soup.find(attrs={"class", "prod-buy-header__title"}).get_text()
+#     price = soup.strong.get_text()
+
+#     self.WS['B{}'.format(index)].value = product_name
+#     self.WS['C{}'.format(index)].value = ea
+#     self.WS['C{}'.format(index)].alignment = align_center
+#     self.WS['D{}'.format(index)].value = url
+#     self.WS['E{}'.format(index)].value = price
+#     self.WS['E{}'.format(index)].alignment = align_center
+
+#     index += 1
+#     total_price += int(price[:-1].replace(',','')) * int(ea)
+
+# self.WS.column_dimensions['B'].width = 70
+# self.WS.column_dimensions['C'].width = 10
+# self.WS.column_dimensions['D'].width = 100
+# self.WS.column_dimensions['E'].width = 20
+# self.WS['D{}'.format(index+1)].value = "총계   "
+# self.WS['D{}'.format(index+1)].alignment = align_right
+# self.WS['E{}'.format(index+1)].value = format(total_price, ',') + "원"
+# self.WS['E{}'.format(index+1)].alignment = align_center
+# self.x.save('./data/coupang.xlsx')
