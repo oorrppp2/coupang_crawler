@@ -52,7 +52,15 @@ class coupang_crawler():
         soup = BeautifulSoup(html, 'html.parser')
 
         product_name = soup.find(attrs={"class", "prod-buy-header__title"}).get_text()
-        price = soup.strong.get_text()[:-1].replace(',','')
+        prices = []
+        for strong in soup.find_all("strong"):
+            for child in strong.children:
+                try:
+                    if child[-1] == "원" and len(child) > 1:
+                        prices.append(int(child[:-1].replace(',','')))
+                except:
+                    continue
+        price = str(min(prices))
 
         return product_name, quantity, price
     
