@@ -57,10 +57,12 @@ class Coupang_UI(QWidget):
 
         name_label = QLabel('제품명')
         quant_label = QLabel('수량')
-        price_label = QLabel('가격')
+        unit_price_label = QLabel('단가')
+        total_price_label = QLabel('총 가격')
         self.instance_grid.addWidget(name_label, 0, 0)
         self.instance_grid.addWidget(quant_label, 0, 1)
-        self.instance_grid.addWidget(price_label, 0, 2)
+        self.instance_grid.addWidget(unit_price_label, 0, 2)
+        self.instance_grid.addWidget(total_price_label, 0, 3)
 
         self.setWindowTitle('쿠팡 간식 주문 마법사')
         self.setGeometry(300, 300, 500, 100)
@@ -78,17 +80,21 @@ class Coupang_UI(QWidget):
         except:
             QMessageBox.warning(self, "Error", "올바른 값을 입력해주세요.")
             return
+        
         new_name_instance = QLineEdit(product_name)
         new_quant_instance = QLineEdit(str(quantity))
-        new_price_instance = QLineEdit(price)
-        new_instance = {"name":new_name_instance, "quantity":new_quant_instance, "price":new_price_instance, "link":url}
+        new_unit_price_instance = QLineEdit(str(int(price)))
+        new_total_price_instance = QLineEdit(str(int(price) * quantity))
+        new_instance = {"name":new_name_instance, "quantity":new_quant_instance, "unit_price":new_unit_price_instance, "total_price": new_total_price_instance, "link":url}
         self.instance_list.append(new_instance)
 
         self.instance_grid.addWidget(new_name_instance, len(self.instance_list), 0)
         self.instance_grid.addWidget(new_quant_instance, len(self.instance_list), 1)
-        self.instance_grid.addWidget(new_price_instance, len(self.instance_list), 2)
+        self.instance_grid.addWidget(new_unit_price_instance, len(self.instance_list), 2)
+        self.instance_grid.addWidget(new_total_price_instance, len(self.instance_list), 3)
 
-        new_price_instance.setEnabled(False)
+        new_unit_price_instance.setEnabled(False)
+        new_total_price_instance.setEnabled(False)
 
         self.url_editline.clear()
         self.quantity_editline.clear()
@@ -97,13 +103,17 @@ class Coupang_UI(QWidget):
     def push_refresh_button(self):
         total = 0
         try:
-            for instance in self.instance_list:
+            for i, instance in enumerate(self.instance_list):
                 if int(instance["quantity"].text()) < 0:
                     QMessageBox.warning(self, "Error", "수량 중 음수가 있습니다.\n수량을 확인하고 다시 시도하세요.")
                     return
-                total += int(instance["quantity"].text()) * int(instance["price"].text())
+                new_total_price = int(instance["unit_price"].text()) * int(instance["quantity"].text())
+                total += new_total_price
+                instance["total_price"].setText(str(new_total_price))
         except:
             QMessageBox.warning(self, "Error", "수량에 문자가 포함 되어 있습니다..")
+        
+
         self.total_label.setText("총액: {0:,d}₩".format(total))
         if total > 500000:
             self.total_label.setStyleSheet("color: red;")
